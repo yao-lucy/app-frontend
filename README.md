@@ -9,3 +9,7 @@ install kivy
 install matplotlib
 - `python -m pip install https://github.com/kivy-garden/matplotlib/archive/master.zip`
 - https://stackoverflow.com/questions/77910687/kivy-2-3-0-attributeerror-figurecanvaskivyagg-object-has-no-attribute-resiz
+
+running the code
+- inside virtual environment, navigate to code file
+- run code file (eg. `python file_name.py`)
