@@ -26,11 +26,8 @@ class StocksScreen(Screen):
     def create_layout(self):
         layout = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '5dp')
         
-        with self.canvas.before:
-            Color(0, 0, 0, 1)  # Black color
-            self.rect = Rectangle(size=self.size, pos=self.pos)
-        self.bind(size=self.update_rect, pos=self.update_rect)
-        
+        # add black background here
+                
         title = Label(text = '[b]Stocks[/b]', markup = True, font_size = '35sp', size_hint_y = None, height = '35sp')
         title.bind(size = title.setter('text_size'))
 
@@ -89,10 +86,6 @@ class StocksScreen(Screen):
         # Switch to the OptimizedScreen
         self.manager.transition = CardTransition(direction='left')
         self.manager.current = 'optimized'
-    
-    def update_rect(self, instance, value):
-        self.rect.size = self.size
-        self.rect.pos = self.pos
 
 class OptimizedScreen(Screen):
     def __init__(self, **kwargs):
@@ -104,10 +97,7 @@ class OptimizedScreen(Screen):
         
         layout = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '5dp')
         
-        with self.canvas.before:
-            Color(0, 0, 0, 1)  # Black color
-            self.rect = Rectangle(size=self.size, pos=self.pos)
-        self.bind(size=self.update_rect, pos=self.update_rect)
+        # add black background here
 
         button = Button(text = 'Back', color = rgba('#4FACF9'), background_color = [0, 0, 0, 0], size_hint = (None, None), size = ('40dp', '20dp'))
         button.bind(on_press=self.switch_to_stocks)
@@ -195,10 +185,6 @@ class OptimizedScreen(Screen):
         # Switch to the StocksScreen
         self.manager.transition = CardTransition(direction='right')
         self.manager.current = 'stocks'
-        
-    def update_rect(self, instance, value):
-        self.rect.size = self.size
-        self.rect.pos = self.pos
 
 class Separator(BoxLayout):
 
