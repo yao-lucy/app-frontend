@@ -8,6 +8,8 @@ from kivy.graphics import Color, Rectangle
 from kivy.utils import rgba
 
 
+# this is lucy's comment for github testing
+
 class OptyApp(App):
 
     def build(self):
