@@ -24,15 +24,18 @@ class StocksScreen(Screen):
         self.add_widget(layout)
     
     def create_layout(self):
-        layout = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '5dp')
-        
-        # add black background here
+
+        # Makes black background
+        layout = Background(orientation = 'vertical', padding = '10dp', spacing = '5dp')
+        with layout.canvas.before:
+            Color(0, 0, 0)
+            layout.rect = Rectangle(size = layout.size, pos = layout.pos)
+        layout.bind(size = layout._update_rect, pos = layout._update_rect)
                 
         title = Label(text = '[b]Stocks[/b]', markup = True, font_size = '35sp', size_hint_y = None, height = '35sp')
         title.bind(size = title.setter('text_size'))
 
-        search_input = TextInput(hint_text = 'Search', font_size = '17sp', multiline = False, size_hint_y = None)
-        search_input.height = '29dp'
+        search_input = TextInput(hint_text = 'Search', font_size = '17sp', multiline = False, size_hint_y = None, height = '29dp')
 
         table = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '10dp', size_hint_y = None)
         # Make sure the height is such that there is something to scroll.
@@ -61,7 +64,7 @@ class StocksScreen(Screen):
             table.add_widget(row)
 
             if i != len(test_tickers) - 1:
-                sep = Separator(size_hint_y = None, height = '1dp')
+                sep = Background(size_hint_y = None, height = '1dp')
                 with sep.canvas.before:
                     Color(rgba = rgba('#808080'))
                     sep.rect = Rectangle(size = sep.size, pos = sep.pos)
@@ -73,7 +76,7 @@ class StocksScreen(Screen):
 
         button = Button(text = '[b]Optimize[/b]', markup = True, font_size = '30sp', background_normal = '', background_color = rgba('#0081ED'), size_hint = (None, None),
                         size = ('180sp', '60sp'), pos_hint = {'center_x' : 0.5})
-        button.bind(on_press=self.switch_to_optimized)
+        button.bind(on_release=self.switch_to_optimized)
 
         layout.add_widget(title)
         layout.add_widget(search_input)
@@ -95,12 +98,15 @@ class OptimizedScreen(Screen):
     
     def create_layout(self):
         
-        layout = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '5dp')
+        # Makes black background
+        layout = Background(orientation = 'vertical', padding = '10dp', spacing = '5dp')
+        with layout.canvas.before:
+            Color(0, 0, 0)
+            layout.rect = Rectangle(size = layout.size, pos = layout.pos)
+        layout.bind(size = layout._update_rect, pos = layout._update_rect)
         
-        # add black background here
-
         button = Button(text = 'Back', color = rgba('#4FACF9'), background_color = [0, 0, 0, 0], size_hint = (None, None), size = ('40dp', '20dp'))
-        button.bind(on_press=self.switch_to_stocks)
+        button.bind(on_release=self.switch_to_stocks)
 
         title = Label(text = '[b]Portfolio[/b]', markup = True, font_size = '35sp', size_hint_y = None, height = '35sp')
         title.bind(size = title.setter('text_size'))
@@ -163,7 +169,7 @@ class OptimizedScreen(Screen):
             table.add_widget(row)
 
             if i != len(tickers) - 1:
-                sep = Separator(size_hint_y = None, height = '1dp')
+                sep = Background(size_hint_y = None, height = '1dp')
                 with sep.canvas.before:
                     Color(rgba = rgba('#808080'))
                     sep.rect = Rectangle(size = sep.size, pos = sep.pos)
@@ -186,11 +192,11 @@ class OptimizedScreen(Screen):
         self.manager.transition = CardTransition(direction='right')
         self.manager.current = 'stocks'
 
-class Separator(BoxLayout):
+class Background(BoxLayout):
 
     def __init__(self, **kwargs):
         # make sure we aren't overriding any important functionality
-        super(Separator, self).__init__(**kwargs)
+        super(Background, self).__init__(**kwargs)
 
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
