@@ -7,6 +7,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.utils import rgba
 from kivy.uix.textinput import TextInput
 
+import re
 import requests
 import json
 
@@ -18,6 +19,7 @@ from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen, CardTransition
 
 class StocksScreen(Screen):
+
     def __init__(self, **kwargs):
         super(StocksScreen, self).__init__(**kwargs)
         layout = self.create_layout()
@@ -31,23 +33,50 @@ class StocksScreen(Screen):
             Color(0, 0, 0)
             layout.rect = Rectangle(size = layout.size, pos = layout.pos)
         layout.bind(size = layout._update_rect, pos = layout._update_rect)
+
+        title_bar = BoxLayout(orientation = 'horizontal', size_hint_y = None, height = '35sp')
                 
         title = Label(text = '[b]Stocks[/b]', markup = True, font_size = '35sp', size_hint_y = None, height = '35sp')
         title.bind(size = title.setter('text_size'))
 
+        button = Button(text = 'Clear All', color = rgba('#4FACF9'), background_color = [0, 0, 0, 0], size_hint = (None, None), size = ('60dp', '20dp'),
+                        pos_hint = {'center_y' : 0.5})
+        button.bind(on_release = self.clear_stocks)
+
+        title_bar.add_widget(title)
+        title_bar.add_widget(button)
+
+        # Search bar switches to search when clicked
         search_input = TextInput(hint_text = 'Search', font_size = '17sp', multiline = False, size_hint_y = None, height = '29dp')
+        search_input.bind(focus = self.switch_to_search)
 
-        table = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '10dp', size_hint_y = None)
+        self.table = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '10dp', size_hint_y = None)
         # Make sure the height is such that there is something to scroll.
-        table.bind(minimum_height = table.setter('height'))
+        self.table.bind(minimum_height = self.table.setter('height'))
 
-        test_tickers = ['GOOGL', 'DIS', 'TSLA', 'SNAP', 'PTON', 'LEVI', 'MS', 'ULTA', 'WBD']
+        scroll = ScrollView()
+        scroll.add_widget(self.table)
 
-        for i in range(len(test_tickers)):
+        button = Button(text = '[b]Optimize[/b]', markup = True, font_size = '30sp', background_normal = '', background_color = rgba('#0081ED'), size_hint = (None, None),
+                        size = ('180sp', '60sp'), pos_hint = {'center_x' : 0.5})
+        button.bind(on_release = self.switch_to_optimized)
+
+        layout.add_widget(title_bar)
+        layout.add_widget(search_input)
+        layout.add_widget(scroll)
+        layout.add_widget(button)
+
+        return layout
+    
+    def draw_table(self):
+
+        self.table.clear_widgets()
+
+        for i in range(len(self.manager.portfolio)):
             row = BoxLayout(orientation = 'horizontal', size_hint_y = None, height = '53dp')
             left = BoxLayout(orientation = 'vertical', spacing = '3dp')
 
-            ticker = Label(text = '[b]' + test_tickers[i] + '[/b]', markup = True, font_size = '30sp', size_hint_y = None, height = '30sp')
+            ticker = Label(text = '[b]' + self.manager.portfolio[i] + '[/b]', markup = True, font_size = '30sp', size_hint_y = None, height = '30sp')
             ticker.bind(size = ticker.setter('text_size'))
 
             name = Label(text = 'test', size_hint_y = None, height = '15sp')
@@ -57,40 +86,152 @@ class StocksScreen(Screen):
             left.add_widget(name)
 
             btn = Button(text=str(i), size_hint = (None, None), size = ('30dp', '30dp'), pos_hint = {'center_y' : 0.5})
+            btn.bind(on_release = self.remove_stock)
 
             row.add_widget(left)
             row.add_widget(btn)
 
-            table.add_widget(row)
+            self.table.add_widget(row)
 
-            if i != len(test_tickers) - 1:
+            if i != len(self.manager.portfolio) - 1:
                 sep = Background(size_hint_y = None, height = '1dp')
                 with sep.canvas.before:
                     Color(rgba = rgba('#808080'))
                     sep.rect = Rectangle(size = sep.size, pos = sep.pos)
                 sep.bind(size = sep._update_rect, pos = sep._update_rect)
-                table.add_widget(sep)
-
-        scroll = ScrollView()
-        scroll.add_widget(table)
-
-        button = Button(text = '[b]Optimize[/b]', markup = True, font_size = '30sp', background_normal = '', background_color = rgba('#0081ED'), size_hint = (None, None),
-                        size = ('180sp', '60sp'), pos_hint = {'center_x' : 0.5})
-        button.bind(on_release=self.switch_to_optimized)
-
-        layout.add_widget(title)
-        layout.add_widget(search_input)
-        layout.add_widget(scroll)
-        layout.add_widget(button)
-
-        return layout
+                self.table.add_widget(sep)
+    
+    def remove_stock(self, instance):
+        # Gets referenced stock
+        stock = instance.parent.children[1].children[1].text.removeprefix('[b]').removesuffix('[/b]')
+        self.manager.portfolio.remove(stock)
+        self.draw_table()
+        if self.table.parent.scroll_y == 0:
+            self.table.parent.scroll_y += 1e-8
+    
+    def clear_stocks(self, instance):
+        # Clears stocks
+        self.manager.portfolio = []
+        self.draw_table()
     
     def switch_to_optimized(self, instance):
         # Switch to the OptimizedScreen
         self.manager.transition = CardTransition(direction='left')
         self.manager.current = 'optimized'
 
+    def switch_to_search(self, instance, value):
+        # Focus on new text box and switch to the SearchScreen
+        textbox = self.manager.get_screen('search').children[0].children[1].children[1]
+
+        textbox.focus = True
+        self.manager.transition = CardTransition(direction='up')
+        self.manager.get_screen('search').suggest(instance = None, value = textbox.text)
+        self.manager.current = 'search'
+
+
+class SearchScreen(Screen):
+
+    def __init__(self, **kwargs):
+        super(SearchScreen, self).__init__(**kwargs)
+
+        self.tickers = ['GOOGL', 'DIS', 'TSLA', 'SNAP', 'PTON', 'LEVI', 'MS', 'ULTA', 'WBD']
+    
+        self.suggestions = []
+
+        layout = self.create_layout()
+        self.add_widget(layout)
+    
+    def create_layout(self):
+
+        # Makes black background
+        layout = Background(orientation = 'vertical', padding = '10dp', spacing = '5dp')
+        with layout.canvas.before:
+            Color(0, 0, 0)
+            layout.rect = Rectangle(size = layout.size, pos = layout.pos)
+        layout.bind(size = layout._update_rect, pos = layout._update_rect)
+
+        title_bar = BoxLayout(orientation = 'horizontal', spacing = '5dp', size_hint_y = None, height = '29dp')
+
+        search_input = TextInput(hint_text = 'Search', font_size = '17sp', multiline = False, size_hint_y = None, height = '29dp')
+        search_input.bind(text = self.suggest)
+
+        button = Button(text = 'Done', color = rgba('#4FACF9'), background_color = [0, 0, 0, 0], size_hint = (None, None), size = ('40dp', '20dp'),
+                        pos_hint = {'center_y' : 0.5})
+        button.bind(on_release = self.switch_to_stocks)
+
+        title_bar.add_widget(search_input)
+        title_bar.add_widget(button)
+
+        self.table = BoxLayout(orientation = 'vertical', padding = '10dp', spacing = '10dp', size_hint_y = None)
+        # Make sure the height is such that there is something to scroll.
+        self.table.bind(minimum_height = self.table.setter('height'))
+
+        scroll = ScrollView()
+        scroll.add_widget(self.table)
+
+        layout.add_widget(title_bar)
+        layout.add_widget(scroll)
+
+        return layout
+
+    def switch_to_stocks(self, instance):
+        # Switch to the StocksScreen
+        self.manager.transition = CardTransition(direction = 'down')
+        self.manager.get_screen('stocks').draw_table()
+        self.manager.current = 'stocks'
+    
+    def suggest(self, instance, value):
+        # Regular expression pattern
+        pattern = re.compile(value.upper())
+
+        # Filter list elements matching the pattern
+        self.suggestions = [elem for elem in self.tickers if pattern.search(elem)]
+
+        self.table.clear_widgets()
+        self.table.parent.scroll_y = 1
+
+        for i in range(len(self.suggestions)):
+            
+            row = BoxLayout(orientation = 'horizontal', size_hint_y = None, height = '53dp')
+            left = BoxLayout(orientation = 'vertical', spacing = '3dp')
+
+            ticker = Label(text = '[b]' + self.suggestions[i] + '[/b]', markup = True, font_size = '30sp', size_hint_y = None, height = '30sp')
+            ticker.bind(size = ticker.setter('text_size'))
+
+            name = Label(text = 'test', size_hint_y = None, height = '15sp')
+            name.bind(size = name.setter('text_size'))
+
+            left.add_widget(ticker)
+            left.add_widget(name)
+
+            row.add_widget(left)
+
+            if self.suggestions[i] in self.manager.portfolio:
+                x = '**placeholder**'
+            else:
+                btn = Button(text=str(i), size_hint = (None, None), size = ('30dp', '30dp'), pos_hint = {'center_y' : 0.5})
+                btn.bind(on_release = self.add_stock)
+                row.add_widget(btn)
+
+            self.table.add_widget(row)
+
+            if i != len(self.suggestions) - 1:
+                sep = Background(size_hint_y = None, height = '1dp')
+                with sep.canvas.before:
+                    Color(rgba = rgba('#808080'))
+                    sep.rect = Rectangle(size = sep.size, pos = sep.pos)
+                sep.bind(size = sep._update_rect, pos = sep._update_rect)
+                self.table.add_widget(sep)
+
+    def add_stock(self, instance):
+        # Gets referenced stock
+        stock = instance.parent.children[1].children[1].text.removeprefix('[b]').removesuffix('[/b]')
+        self.manager.portfolio.append(stock)
+        instance.parent.remove_widget(instance)
+
+
 class OptimizedScreen(Screen):
+
     def __init__(self, **kwargs):
         super(OptimizedScreen, self).__init__(**kwargs)
         layout = self.create_layout()
@@ -202,13 +343,22 @@ class Background(BoxLayout):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
+class PortfolioManager(ScreenManager):
+
+    def __init__(self, **kwargs):
+        # make sure we aren't overriding any important functionality
+        super(PortfolioManager, self).__init__(**kwargs)
+
+        self.portfolio = []
+
 class TestApp(App):
 
     def build(self):
         # Create the screen manager
-        sm = ScreenManager()
-        sm.add_widget(StocksScreen(name='stocks'))
-        sm.add_widget(OptimizedScreen(name='optimized'))
+        sm = PortfolioManager()
+        sm.add_widget(StocksScreen(name = 'stocks'))
+        sm.add_widget(SearchScreen(name = 'search'))
+        sm.add_widget(OptimizedScreen(name = 'optimized'))
 
         return sm
 
