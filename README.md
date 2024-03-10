@@ -13,6 +13,3 @@ install matplotlib
 running the code
 - inside virtual environment, navigate to code file
 - run code file (eg. `python file_name.py`)
-
-Can also run this (slow) repl
-https://replit.com/@ajw9713/AppTester
